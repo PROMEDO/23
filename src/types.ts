@@ -673,11 +673,45 @@ export interface Restaurant {
   appNotificationsEnabled?: boolean;
   orderChannel?: 'both' | 'telegram' | 'whatsapp' | 'app';
   qrDesign?: {
-    dotStyle?: 'square' | 'dots' | 'rounded' | 'diamond';
-    bgPreset?: 'white' | 'cream' | 'dark' | 'emerald' | 'gold';
-    framePreset?: 'minimal' | 'table' | 'classic' | 'badge';
+    dotStyle?: 'square' | 'dots' | 'rounded' | 'diamond' | 'classy' | 'bars' | 'star';
+    eyeOuterStyle?: 'square' | 'rounded' | 'circle' | 'leaf' | 'shield';
+    eyeInnerStyle?: 'square' | 'rounded' | 'circle' | 'diamond';
+    bgPreset?:
+      | 'white'
+      | 'cream'
+      | 'dark'
+      | 'emerald'
+      | 'gold'
+      | 'midnight'
+      | 'sunset'
+      | 'rose'
+      | 'ocean'
+      | 'royal'
+      | 'obsidian'
+      | 'terracotta'
+      | 'custom';
+    customBg1?: string;
+    customBg2?: string;
+    bgGradientAngle?: number;
+    bgPattern?: 'none' | 'dots' | 'grid' | 'waves' | 'diagonal' | 'aura' | 'sparkle';
+    framePreset?: 'minimal' | 'table' | 'classic' | 'badge' | 'modern' | 'ribbon' | 'poster' | 'sticker';
     qrColor?: string;
+    qrUseGradient?: boolean;
+    qrColor2?: string;
+    qrGradientDir?: 'diagonal' | 'vertical' | 'horizontal' | 'radial';
+    eyeColor?: string;
+    tileBgMode?: 'light' | 'cream' | 'soft' | 'dark' | 'custom';
+    tileCustomBg?: string;
+    tileBorder?: boolean;
     showLogo?: boolean;
+    centerMode?: 'none' | 'logo' | 'initials' | 'scan' | 'utensils';
+    logoShape?: 'rounded' | 'circle';
+    logoSize?: 'sm' | 'md' | 'lg';
+    customTitle?: string;
+    customSubtitle?: string;
+    customCta?: string;
+    tableNumber?: string;
+    showUrlFooter?: boolean;
   };
   [key: string]: any;
 }
