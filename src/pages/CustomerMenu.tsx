@@ -25,7 +25,9 @@ import {
   MessageCircle,
   Minus,
   Plus,
+  RotateCw,
   Search,
+  Send,
   Share2,
   ShieldCheck,
   ShoppingBag,
@@ -1287,7 +1289,6 @@ const PublicMenuContent: React.FC<PublicMenuContentProps> = ({
   const [selectedCityIdx, setSelectedCityIdx] = useState<number>(0);
   const [unlistedAreaSelected, setUnlistedAreaSelected] = useState<boolean>(false);
   const [zoneDropdownOpen, setZoneDropdownOpen] = useState<boolean>(false);
-  const [zoneSearch, setZoneSearch] = useState<string>('');
   const [checkoutTriedSubmit, setCheckoutTriedSubmit] = useState<boolean>(false);
 
   // Cross-menu saved customer details (auto-filled across all restaurant menus; GPS stays live per visit)
@@ -5431,568 +5432,473 @@ const PublicMenuContent: React.FC<PublicMenuContentProps> = ({
                     }}
                     className={`pm-cart-complete-btn ${orderLimitBlocked ? 'blocked' : ''}`}
                   >
-                    <span>اكمل الطلب</span>
-                    <span className="tabular-nums" style={{ fontSize: '14px', fontWeight: 800 }}>
-                      {fmtMoney(finalTotal)}
-                    </span>
+                    <span className="pm-cta-label">اكمل الطلب</span>
+                    <span className="pm-cta-price tabular-nums">{fmtMoney(finalTotal)}</span>
                   </button>
                 </div>
               </>
             ) : (
-              /* STEP 2: TWO-PART NAME -> WHATSAPP PHONE -> DELIVERY ZONE BUTTON -> SEMI-MANDATORY GPS -> ADDRESS BAR */
-              <form
-                onSubmit={handleSubmitOrder}
-                noValidate
-                className="pm-cart-scroll"
-                style={{ paddingBottom: 'calc(22px + env(safe-area-inset-bottom, 0px))' }}
-              >
-                {/* 1. Customer Two-Part Name */}
-                <div style={{ marginBottom: '12px' }}>
-                  <label
-                    htmlFor="pm-checkout-name"
-                    style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--pm-ink)', marginBottom: '6px' }}
-                  >
-                    الاسم الثنائي <span style={{ color: '#f87171' }}>*</span>
-                  </label>
-                  <input
-                    id="pm-checkout-name"
-                    type="text"
-                    className={`pm-checkout-input ${
-                      checkoutTriedSubmit && !isTwoPartNameValid(customerName) ? 'has-error' : ''
-                    }`}
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="اكتب اسمك الثنائي"
-                    required
-                  />
-                  {checkoutTriedSubmit && !isTwoPartNameValid(customerName) && (
-                    <div style={{ marginTop: '5px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                      يرجى كتابة الاسم الثنائي (مثال: أحمد علي).
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Valid WhatsApp Phone Number */}
-                <div style={{ marginBottom: '14px' }}>
-                  <label
-                    htmlFor="pm-checkout-phone"
-                    style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--pm-ink)', marginBottom: '6px' }}
-                  >
-                    رقم هاتف الواتساب <span style={{ color: '#f87171' }}>*</span>
-                  </label>
-                  <input
-                    id="pm-checkout-phone"
-                    type="tel"
-                    inputMode="tel"
-                    dir="ltr"
-                    className={`pm-checkout-input ${
-                      checkoutTriedSubmit && !isValidWhatsAppPhone(customerPhone) ? 'has-error' : ''
-                    }`}
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="07XXXXXXXXX"
-                    required
-                    style={{ textAlign: 'left' }}
-                  />
-                  {checkoutTriedSubmit && !isValidWhatsAppPhone(customerPhone) && (
-                    <div style={{ marginTop: '5px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                      يرجى إدخال رقم هاتف واتساب صحيح (مثال: 07XXXXXXXXX).
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Polished Delivery Zone Selector (Structured Cards + Search + Sub-Cities) */}
-                {orderType === 'delivery' && deliveryZones.length > 0 && (() => {
-                  const activeZoneName = activeZone ? String(activeZone.area || activeZone.name || '').trim() : '';
-                  const normalizedZoneQuery = zoneSearch.trim().toLowerCase();
-                  const filteredZones = deliveryZones
-                    .map((z, idx) => ({ z, idx, label: String(z.area || z.name || '').trim() }))
-                    .filter(({ label }) => !normalizedZoneQuery || label.toLowerCase().includes(normalizedZoneQuery));
-
-                  return (
-                    <div
-                      className={`pm-checkout-section pm-zone-section ${
-                        checkoutTriedSubmit && !activeZone && !unlistedAreaSelected ? 'has-error' : ''
-                      }`}
-                    >
-                      <div className="pm-zone-sec-header">
-                        <span className="pm-zone-sec-title">
-                          <MapPin size={15} style={{ color: accentText, flexShrink: 0 }} />
-                          <span>منطقة التوصيل</span>
-                        </span>
-                        {unlistedAreaSelected ? (
-                          <span className="pm-zone-header-pill is-warn">تُحدد عبر واتساب</span>
-                        ) : activeZone ? (
-                          <span className="pm-zone-header-pill is-ok tabular-nums">
-                            {effectiveDeliveryFee > 0 ? fmtMoney(effectiveDeliveryFee) : 'توصيل مجاني'}
-                          </span>
-                        ) : (
-                          <span className="pm-zone-header-count">
-                            {deliveryZones.length} {deliveryZones.length <= 10 ? 'مناطق' : 'منطقة'}
-                          </span>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        className={`pm-zone-trigger-btn ${
-                          activeZone || unlistedAreaSelected ? 'has-selection' : ''
+              /* STEP 2: CLEAN SYMMETRICAL CHECKOUT FORM WITH PINNED FOOTER */
+              <form onSubmit={handleSubmitOrder} noValidate className="pm-co-form">
+                <div className="pm-cart-scroll pm-co-scroll">
+                  {/* 1. Customer Name & WhatsApp Phone */}
+                  <div className="pm-co-fields">
+                    <div className="pm-co-field">
+                      <label htmlFor="pm-checkout-name" className="pm-co-label">
+                        الاسم الثنائي <span className="pm-co-req">*</span>
+                      </label>
+                      <input
+                        id="pm-checkout-name"
+                        type="text"
+                        className={`pm-checkout-input ${
+                          checkoutTriedSubmit && !isTwoPartNameValid(customerName) ? 'has-error' : ''
                         }`}
-                        onClick={() => setZoneDropdownOpen((prev) => !prev)}
-                        aria-expanded={zoneDropdownOpen}
-                      >
-                        <span className="pm-zone-trigger-icon">
-                          {activeZone || unlistedAreaSelected ? (
-                            <Check size={16} strokeWidth={2.8} />
-                          ) : (
-                            <Truck size={16} />
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="اكتب اسمك الثنائي"
+                        required
+                      />
+                      {checkoutTriedSubmit && !isTwoPartNameValid(customerName) && (
+                        <div className="pm-co-err">يرجى كتابة الاسم الثنائي (مثال: أحمد علي).</div>
+                      )}
+                    </div>
+
+                    <div className="pm-co-field">
+                      <label htmlFor="pm-checkout-phone" className="pm-co-label">
+                        رقم هاتف الواتساب <span className="pm-co-req">*</span>
+                      </label>
+                      <input
+                        id="pm-checkout-phone"
+                        type="tel"
+                        inputMode="tel"
+                        dir="ltr"
+                        className={`pm-checkout-input ${
+                          checkoutTriedSubmit && !isValidWhatsAppPhone(customerPhone) ? 'has-error' : ''
+                        }`}
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="07XXXXXXXXX"
+                        required
+                        style={{ textAlign: 'left' }}
+                      />
+                      {checkoutTriedSubmit && !isValidWhatsAppPhone(customerPhone) && (
+                        <div className="pm-co-err">
+                          يرجى إدخال رقم هاتف واتساب صحيح (مثال: 07XXXXXXXXX).
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Simplified Clean Delivery Zone Selector (No Search, Single Card, Hairline Rows) */}
+                  {orderType === 'delivery' && deliveryZones.length > 0 && (() => {
+                    const activeZoneName = activeZone ? String(activeZone.area || activeZone.name || '').trim() : '';
+                    const hasZoneError = checkoutTriedSubmit && !activeZone && !unlistedAreaSelected;
+
+                    return (
+                      <div className="pm-co-block">
+                        <div className="pm-co-sec-head">
+                          <span className="pm-co-sec-title">
+                            منطقة التوصيل <span className="pm-co-req">*</span>
+                          </span>
+                          <span
+                            className={`pm-co-sec-meta tabular-nums ${
+                              unlistedAreaSelected ? 'is-warn' : activeZone ? 'is-accent' : ''
+                            }`}
+                          >
+                            {unlistedAreaSelected
+                              ? 'تُحدد مع الكاشير'
+                              : activeZone
+                              ? effectiveDeliveryFee > 0
+                                ? fmtMoney(effectiveDeliveryFee)
+                                : 'توصيل مجاني'
+                              : `${deliveryZones.length} ${deliveryZones.length <= 10 ? 'مناطق' : 'منطقة'}`}
+                          </span>
+                        </div>
+
+                        <div className={`pm-zone-card ${hasZoneError ? 'has-error' : ''}`}>
+                          <button
+                            type="button"
+                            className={`pm-zone-trigger ${activeZone || unlistedAreaSelected ? 'is-selected' : ''}`}
+                            onClick={() => setZoneDropdownOpen((prev) => !prev)}
+                            aria-expanded={zoneDropdownOpen}
+                          >
+                            <span className="pm-zone-trigger-ico">
+                              {activeZone || unlistedAreaSelected ? (
+                                <Check size={15} strokeWidth={2.8} />
+                              ) : (
+                                <MapPin size={16} />
+                              )}
+                            </span>
+
+                            <span className="pm-zone-trigger-copy">
+                              <span className="pm-zone-trigger-main">
+                                {unlistedAreaSelected
+                                  ? 'منطقتي غير موجودة بالقائمة'
+                                  : activeZone
+                                  ? `${activeZoneName}${
+                                      hasMultipleSubCities && activeCity?.name ? ` — ${activeCity.name}` : ''
+                                    }`
+                                  : 'اختر منطقة التوصيل'}
+                              </span>
+                              <span className="pm-zone-trigger-sub">
+                                {unlistedAreaSelected
+                                  ? 'سيتم تحديد السعر عبر محادثة واتساب'
+                                  : activeZone
+                                  ? qualifiesFreeDelivery && rawDeliveryFee > 0
+                                    ? `توصيل مجاني بدلاً من ${fmtMoney(rawDeliveryFee)}`
+                                    : 'اضغط للتغيير'
+                                  : 'اضغط لعرض المناطق المتاحة'}
+                              </span>
+                            </span>
+
+                            <ChevronDown
+                              size={18}
+                              className={`pm-zone-chevron ${zoneDropdownOpen ? 'is-open' : ''}`}
+                            />
+                          </button>
+
+                          {zoneDropdownOpen && (
+                            <div className="pm-zone-rows-wrap">
+                              <div className="pm-zone-rows" role="listbox" aria-label="قائمة مناطق التوصيل">
+                                {deliveryZones.map((z, idx) => {
+                                  const label = String(z.area || z.name || '').trim() || `منطقة #${idx + 1}`;
+                                  const selected = !unlistedAreaSelected && selectedAreaIdx === idx;
+                                  const flatFee = Number(z.fee ?? z.cities?.[0]?.fee ?? 0) || 0;
+                                  const hasSub = Boolean(z.cities && z.cities.length > 1);
+                                  return (
+                                    <button
+                                      key={`${label}-${idx}`}
+                                      type="button"
+                                      role="option"
+                                      aria-selected={selected}
+                                      className={`pm-zone-row ${selected ? 'selected' : ''}`}
+                                      onClick={() => {
+                                        setSelectedAreaIdx(idx);
+                                        setSelectedCityIdx(0);
+                                        setUnlistedAreaSelected(false);
+                                        if (!hasSub) {
+                                          setZoneDropdownOpen(false);
+                                        }
+                                      }}
+                                    >
+                                      <span className="pm-zone-row-name">{label}</span>
+                                      <span className="pm-zone-row-end">
+                                        <span
+                                          className={`pm-zone-row-fee tabular-nums ${
+                                            hasSub ? 'is-multi' : flatFee > 0 ? 'is-paid' : 'is-free'
+                                          }`}
+                                        >
+                                          {hasSub
+                                            ? 'أحياء متعددة'
+                                            : flatFee > 0
+                                            ? fmtMoney(flatFee)
+                                            : 'مجاني'}
+                                        </span>
+                                        <span className={`pm-zone-row-check ${selected ? 'is-on' : ''}`}>
+                                          {selected && <Check size={14} strokeWidth={2.8} />}
+                                        </span>
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              <button
+                                type="button"
+                                className={`pm-zone-row pm-zone-row-unlisted ${
+                                  unlistedAreaSelected ? 'selected' : ''
+                                }`}
+                                onClick={() => {
+                                  setUnlistedAreaSelected(true);
+                                  setSelectedAreaIdx(-1);
+                                  setSelectedCityIdx(0);
+                                  setZoneDropdownOpen(false);
+                                }}
+                              >
+                                <span className="pm-zone-row-unlisted-start">
+                                  <MessageCircle size={15} />
+                                  <span>منطقتي غير موجودة بالقائمة</span>
+                                </span>
+                                <span className="pm-zone-row-end">
+                                  <span className="pm-zone-row-fee is-multi">تُحدد مع الكاشير</span>
+                                  <span className={`pm-zone-row-check ${unlistedAreaSelected ? 'is-on' : ''}`}>
+                                    {unlistedAreaSelected && <Check size={14} strokeWidth={2.8} />}
+                                  </span>
+                                </span>
+                              </button>
+                            </div>
                           )}
-                        </span>
 
-                        <span className="pm-zone-trigger-copy">
-                          <span className="pm-zone-trigger-main">
-                            {unlistedAreaSelected
-                              ? 'منطقتي غير موجودة بالقائمة'
-                              : activeZone
-                              ? `${activeZoneName}${
-                                  hasMultipleSubCities && activeCity?.name ? ` — ${activeCity.name}` : ''
-                                }`
-                              : 'اختر منطقة التوصيل'}
-                          </span>
-                          <span className="pm-zone-trigger-sub">
-                            {unlistedAreaSelected
-                              ? 'سيتم تحديد أجور التوصيل مباشرة مع الكاشير'
-                              : activeZone
-                              ? qualifiesFreeDelivery && rawDeliveryFee > 0
-                                ? `توصيل مجاني بدلاً من ${fmtMoney(rawDeliveryFee)}`
-                                : effectiveDeliveryFee > 0
-                                ? `أجور التوصيل: ${fmtMoney(effectiveDeliveryFee)} · اضغط للتغيير`
-                                : 'توصيل مجاني لهذه المنطقة · اضغط للتغيير'
-                              : 'اضغط لعرض المناطق المتاحة وأجور التوصيل'}
-                          </span>
-                        </span>
-
-                        <ChevronDown
-                          size={18}
-                          style={{
-                            flexShrink: 0,
-                            color: 'var(--pm-muted)',
-                            transform: zoneDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.2s ease',
-                          }}
-                        />
-                      </button>
-
-                      {zoneDropdownOpen && (
-                        <div className="pm-zone-dropdown">
-                          {deliveryZones.length >= 5 && (
-                            <div className="pm-zone-search-box">
-                              <Search size={15} style={{ color: 'var(--pm-muted)', flexShrink: 0 }} />
-                              <input
-                                type="text"
-                                dir="auto"
-                                value={zoneSearch}
-                                onChange={(e) => setZoneSearch(e.target.value)}
-                                placeholder="ابحث عن اسم منطقتك..."
-                                className="pm-zone-search-input"
-                              />
-                              {zoneSearch && (
-                                <button
-                                  type="button"
-                                  aria-label="مسح البحث"
-                                  onClick={() => setZoneSearch('')}
-                                  className="pm-zone-search-clear"
-                                >
-                                  <X size={14} />
-                                </button>
+                          {activeZone && !unlistedAreaSelected && hasMultipleSubCities && (
+                            <div className="pm-zone-subcities-wrap">
+                              <div className="pm-zone-subcities-lbl">اختر الحي ضمن {activeZoneName}</div>
+                              {zoneCities.length <= 6 ? (
+                                <div className="pm-zone-subcities-grid">
+                                  {zoneCities.map((ct, idx) => {
+                                    const isCitySelected = safeCityIdx === idx;
+                                    return (
+                                      <button
+                                        key={`${ct.name}-${idx}`}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedCityIdx(idx);
+                                          setZoneDropdownOpen(false);
+                                        }}
+                                        className={`pm-zone-subcity-chip${isCitySelected ? ' selected' : ''}`}
+                                      >
+                                        <span className="pm-zone-subcity-name">{ct.name}</span>
+                                        <span className="tabular-nums pm-zone-subcity-fee">
+                                          {ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني'}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <AppSelect
+                                  title="اختر الحي / المدينة"
+                                  variant="compact"
+                                  value={String(safeCityIdx)}
+                                  onChange={(val) => {
+                                    setSelectedCityIdx(Number(val));
+                                    setZoneDropdownOpen(false);
+                                  }}
+                                  options={zoneCities.map((ct, idx) => ({
+                                    value: String(idx),
+                                    label: ct.name,
+                                    hint: ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني',
+                                  }))}
+                                  style={{
+                                    background: 'var(--pm-card)',
+                                    color: 'var(--pm-ink)',
+                                    border: '1px solid var(--pm-line)',
+                                    borderRadius: '11px',
+                                  }}
+                                />
                               )}
                             </div>
                           )}
-
-                          {filteredZones.length === 0 ? (
-                            <div className="pm-zone-empty-search">
-                              لا توجد منطقة مطابقة لـ «{zoneSearch}»
-                            </div>
-                          ) : (
-                            <div className={`pm-zone-list ${filteredZones.length > 1 ? 'two-col' : ''}`}>
-                              {filteredZones.map(({ z, idx, label }) => {
-                                const selected = !unlistedAreaSelected && selectedAreaIdx === idx;
-                                const flatFee = Number(z.fee ?? z.cities?.[0]?.fee ?? 0) || 0;
-                                const hasSub = Boolean(z.cities && z.cities.length > 1);
-                                const zoneDisplayLabel = label || `منطقة #${idx + 1}`;
-                                return (
-                                  <button
-                                    key={`${zoneDisplayLabel}-${idx}`}
-                                    type="button"
-                                    className={`pm-zone-btn ${selected ? 'selected' : ''}`}
-                                    onClick={() => {
-                                      setSelectedAreaIdx(idx);
-                                      setSelectedCityIdx(0);
-                                      setUnlistedAreaSelected(false);
-                                      if (!hasSub) {
-                                        setZoneDropdownOpen(false);
-                                        setZoneSearch('');
-                                      }
-                                    }}
-                                  >
-                                    <div className="pm-zone-card-top">
-                                      <span className="pm-zone-card-name">{zoneDisplayLabel}</span>
-                                      <span className={`pm-zone-card-radio ${selected ? 'is-checked' : ''}`}>
-                                        {selected && <Check size={11} strokeWidth={3.2} />}
-                                      </span>
-                                    </div>
-                                    <div className="pm-zone-card-fee tabular-nums">
-                                      {hasSub ? (
-                                        <span className="pm-zone-fee-multi">أحياء متعددة</span>
-                                      ) : flatFee > 0 ? (
-                                        <span className="pm-zone-fee-paid">{fmtMoney(flatFee)}</span>
-                                      ) : (
-                                        <span className="pm-zone-fee-free">توصيل مجاني</span>
-                                      )}
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            className={`pm-zone-unlisted-btn ${unlistedAreaSelected ? 'selected' : ''}`}
-                            onClick={() => {
-                              setUnlistedAreaSelected(true);
-                              setSelectedAreaIdx(-1);
-                              setSelectedCityIdx(0);
-                              setZoneDropdownOpen(false);
-                              setZoneSearch('');
-                            }}
-                          >
-                            <span className="pm-zone-unlisted-copy">
-                              <b>منطقتي غير موجودة بالقائمة</b>
-                              <span>تواصل سريع لتحديد التوصيل</span>
-                            </span>
-                            <span className="pm-zone-unlisted-ico">
-                              <MessageCircle size={16} />
-                            </span>
-                          </button>
                         </div>
-                      )}
 
-                      {activeZone && !unlistedAreaSelected && hasMultipleSubCities && (
-                        <div className="pm-zone-subcities-wrap">
-                          <label className="pm-zone-subcities-lbl">
-                            اختر الحي ضمن {activeZoneName}
-                          </label>
-                          {zoneCities.length <= 6 ? (
-                            <div className="pm-zone-subcities-grid">
-                              {zoneCities.map((ct, idx) => {
-                                const isCitySelected = safeCityIdx === idx;
-                                return (
-                                  <button
-                                    key={`${ct.name}-${idx}`}
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedCityIdx(idx);
-                                      setZoneDropdownOpen(false);
-                                    }}
-                                    className={`pm-zone-subcity-chip${isCitySelected ? ' selected' : ''}`}
-                                  >
-                                    <span>{ct.name}</span>
-                                    <span className="tabular-nums pm-zone-subcity-fee">
-                                      {ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني'}
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <AppSelect
-                              title="اختر الحي / المدينة"
-                              variant="compact"
-                              value={String(safeCityIdx)}
-                              onChange={(val) => {
-                                setSelectedCityIdx(Number(val));
-                                setZoneDropdownOpen(false);
-                              }}
-                              options={zoneCities.map((ct, idx) => ({
-                                value: String(idx),
-                                label: ct.name,
-                                hint: ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني',
-                              }))}
-                              style={{
-                                background: 'var(--pm-card)',
-                                color: 'var(--pm-ink)',
-                                border: '1px solid var(--pm-line)',
-                                borderRadius: '11px',
-                              }}
-                            />
-                          )}
-                        </div>
-                      )}
+                        {activeZone && !unlistedAreaSelected && activeCity?.eta && (
+                          <div className="pm-co-note">مدة التوصيل المتوقعة: {activeCity.eta}</div>
+                        )}
 
-                      {activeZone && !unlistedAreaSelected && activeCity?.eta && (
-                        <div style={{ fontSize: '11.5px', color: 'var(--pm-muted)', marginTop: '8px', fontWeight: 600 }}>
-                          مدة التوصيل المتوقعة: {activeCity.eta}
-                        </div>
-                      )}
+                        {hasZoneError && (
+                          <div className="pm-co-err">يرجى اختيار منطقة التوصيل من القائمة.</div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                      {unlistedAreaSelected && (
-                        <div
-                          style={{
-                            marginTop: '8px',
-                            padding: '9px 11px',
-                            borderRadius: '12px',
-                            background: 'color-mix(in srgb, var(--pm-brand) 10%, transparent)',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            color: 'var(--pm-ink)',
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          سيتم فتح محادثة الواتساب مع الكاشير لتأكيد التوصيل وتحديد السعر لمنطقتك.
-                        </div>
-                      )}
-
-                      {checkoutTriedSubmit && !activeZone && !unlistedAreaSelected && (
-                        <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                          يرجى اختيار منطقة التوصيل من القائمة.
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {orderType === 'table' && (
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--pm-ink)', marginBottom: '6px' }}>
-                      رقم الطاولة (مطلوب لطلبات الصالة)
-                    </label>
-                    <AppSelect
-                      title="رقم الطاولة"
-                      value={selectedTable || '1'}
-                      onChange={(val) => setSelectedTable(val)}
-                      options={Array.from({ length: 15 }, (_, i) => {
-                        const num = String(i + 1);
-                        return { value: num, label: `طاولة #${num}` };
-                      })}
-                      style={{
-                        width: '100%',
-                        borderRadius: '12px',
-                        border: '1px solid var(--pm-line)',
-                        background: 'var(--pm-soft)',
-                        color: 'var(--pm-ink)',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* 4. Semi-Mandatory GPS Location Button (Pin icon on LEFT of text) + 5. Single Detailed Address Bar below */}
-                {orderType === 'delivery' && (
-                  <div
-                    ref={gpsSectionRef}
-                    className={`pm-checkout-section ${
-                      checkoutTriedSubmit &&
-                      ((!gpsCoords && !gpsAttempted) || (!gpsCoords && gpsAttempted && customerAddress.trim().length < 5))
-                        ? 'has-error'
-                        : ''
-                    }`}
-                  >
-                    <div
-                      style={{
-                        background: gpsCoords ? 'rgba(16, 185, 129, 0.14)' : 'var(--pm-card)',
-                        border: gpsCoords
-                          ? '1.5px solid #34D399'
-                          : checkoutTriedSubmit && !gpsCoords && !gpsAttempted
-                          ? '1.5px solid rgba(248, 113, 113, 0.85)'
-                          : '1.5px dashed color-mix(in srgb, var(--pm-brand) 48%, var(--pm-line))',
-                        borderRadius: '13px',
-                        padding: '10px',
-                        marginBottom: '10px',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        dir="rtl"
-                        onClick={handleGetGps}
-                        disabled={gpsLoading}
-                        className={`pm-gps-cta-btn ${
-                          !gpsCoords && checkoutTriedSubmit && !gpsAttempted ? 'is-attention' : ''
-                        }`}
+                  {orderType === 'table' && (
+                    <div className="pm-co-field">
+                      <label className="pm-co-label">رقم الطاولة (مطلوب لطلبات الصالة)</label>
+                      <AppSelect
+                        title="رقم الطاولة"
+                        value={selectedTable || '1'}
+                        onChange={(val) => setSelectedTable(val)}
+                        options={Array.from({ length: 15 }, (_, i) => {
+                          const num = String(i + 1);
+                          return { value: num, label: `طاولة #${num}` };
+                        })}
                         style={{
                           width: '100%',
-                          minHeight: '46px',
-                          padding: '10px 16px',
-                          borderRadius: '11px',
-                          border: '1px solid color-mix(in srgb, var(--pm-brand) 45%, transparent)',
-                          background: gpsCoords ? '#059669' : brandColor,
-                          color: gpsCoords ? '#ffffff' : brandInk,
-                          fontSize: '14px',
-                          fontWeight: 900,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          touchAction: 'manipulation',
+                          borderRadius: '12px',
+                          border: '1px solid var(--pm-line)',
+                          background: 'var(--pm-soft)',
+                          color: 'var(--pm-ink)',
                         }}
-                      >
-                        <span>
-                          {gpsLoading
-                            ? 'جاري تحديد موقعك الحالي...'
-                            : gpsCoords
-                            ? 'تم تحديد موقعي الحالي ✓'
-                            : 'تحديد موقعي الحالي'}
-                        </span>
-                        <MapPin size={17} style={{ flexShrink: 0 }} />
-                      </button>
+                      />
+                    </div>
+                  )}
 
-                      {gpsCoords && (
-                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '12px', color: isLightMenu ? '#047857' : '#6EE7B7' }}>
-                          <span className="tabular-nums">الإحداثيات: {gpsCoords.lat}, {gpsCoords.lng}</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <a
-                              href={`https://www.google.com/maps?q=${gpsCoords.lat},${gpsCoords.lng}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: isLightMenu ? '#0369a1' : '#38bdf8', fontWeight: 700, textDecoration: 'underline' }}
+                  {/* 3. Clean Single-Surface Location & Detailed Address */}
+                  {orderType === 'delivery' && (() => {
+                    const hasLocError =
+                      checkoutTriedSubmit &&
+                      ((!gpsCoords && !gpsAttempted) ||
+                        (!gpsCoords && gpsAttempted && customerAddress.trim().length < 5));
+
+                    return (
+                      <div ref={gpsSectionRef} className="pm-co-block">
+                        <div className="pm-co-sec-head">
+                          <span className="pm-co-sec-title">موقع التوصيل والعنوان</span>
+                          {gpsCoords && (
+                            <span className="pm-co-sec-meta is-ok">تم تحديد الموقع ✓</span>
+                          )}
+                        </div>
+
+                        <div className={`pm-co-loc-card ${hasLocError ? 'has-error' : ''}`}>
+                          {!gpsCoords ? (
+                            <button
+                              type="button"
+                              dir="rtl"
+                              onClick={handleGetGps}
+                              disabled={gpsLoading}
+                              className={`pm-gps-cta-btn ${
+                                checkoutTriedSubmit && !gpsAttempted ? 'is-attention' : ''
+                              }`}
+                              style={{
+                                background: brandColor,
+                                color: brandInk,
+                              }}
                             >
-                              Google Maps ↗
-                            </a>
-                            <a
-                              href={`https://waze.com/ul?ll=${gpsCoords.lat},${gpsCoords.lng}&navigate=yes`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: isLightMenu ? '#0284c7' : '#7dd3fc', fontWeight: 700, textDecoration: 'underline' }}
-                            >
-                              Waze ↗
-                            </a>
+                              <MapPin size={17} style={{ flexShrink: 0 }} />
+                              <span>
+                                {gpsLoading ? 'جاري تحديد موقعك الحالي...' : 'تحديد موقعي الحالي'}
+                              </span>
+                            </button>
+                          ) : (
+                            <div className="pm-gps-done-bar">
+                              <span className="pm-gps-done-status">
+                                <span className="pm-gps-done-badge">
+                                  <Check size={13} strokeWidth={3} />
+                                </span>
+                                <span>تم حفظ إحداثيات موقعك</span>
+                              </span>
+                              <div className="pm-gps-done-actions">
+                                <a
+                                  href={`https://www.google.com/maps?q=${gpsCoords.lat},${gpsCoords.lng}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="pm-gps-map-link"
+                                >
+                                  Google Maps
+                                </a>
+                                <span aria-hidden="true" className="pm-gps-link-sep">·</span>
+                                <a
+                                  href={`https://waze.com/ul?ll=${gpsCoords.lat},${gpsCoords.lng}&navigate=yes`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="pm-gps-map-link"
+                                >
+                                  Waze
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={handleGetGps}
+                                  disabled={gpsLoading}
+                                  aria-label="تحديث موقعي الحالي"
+                                  title="تحديث الموقع"
+                                  className="pm-gps-refresh-btn"
+                                >
+                                  <RotateCw size={13} className={gpsLoading ? 'animate-spin' : ''} />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {gpsErrorMsg && !gpsCoords && (
+                            <div className="pm-co-warn">{gpsErrorMsg}</div>
+                          )}
+
+                          <input
+                            id="pm-checkout-address"
+                            type="text"
+                            className="pm-checkout-input pm-co-address-input"
+                            value={customerAddress}
+                            onChange={(e) => setCustomerAddress(e.target.value)}
+                            placeholder="اكتب عنوانك التفصيلي (الشارع، أقرب نقطة دالة)"
+                            aria-label="اكتب عنوانك التفصيلي"
+                          />
+                        </div>
+
+                        {checkoutTriedSubmit && !gpsCoords && !gpsAttempted && (
+                          <div className="pm-co-err">
+                            يرجى الضغط على زر &quot;تحديد موقعي الحالي&quot; أعلاه أولاً.
                           </div>
+                        )}
+
+                        {checkoutTriedSubmit && !gpsCoords && gpsAttempted && customerAddress.trim().length < 5 && (
+                          <div className="pm-co-err">
+                            تعذر التحديد التلقائي للموقع، يرجى كتابة عنوانك التفصيلي أعلاه.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {orderType === 'pickup' && (
+                    <div
+                      style={{
+                        background: 'var(--pm-soft)',
+                        border: '1px solid var(--pm-line)',
+                        borderRadius: '14px',
+                        padding: '12px 14px',
+                        fontSize: '12.5px',
+                        color: 'var(--pm-ink)',
+                      }}
+                    >
+                      <b>معلومات فرع الاستلام: {rest.n}</b>
+                      {(rest.mapUrl || addons.locationLinks?.googleMapsUrl || rest.wazeUrl || addons.locationLinks?.wazeUrl) && (
+                        <div style={{ marginTop: '6px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                          {(rest.mapUrl || addons.locationLinks?.googleMapsUrl) && (
+                            <a
+                              href={rest.mapUrl || addons.locationLinks?.googleMapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: accentText, fontWeight: 700, textDecoration: 'underline' }}
+                            >
+                              خرائط كوكل ←
+                            </a>
+                          )}
+                          {(rest.wazeUrl || addons.locationLinks?.wazeUrl) && (
+                            <a
+                              href={rest.wazeUrl || addons.locationLinks?.wazeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: accentText, fontWeight: 700, textDecoration: 'underline' }}
+                            >
+                              موقع ويز (Waze) ←
+                            </a>
+                          )}
                         </div>
                       )}
 
-                      {gpsErrorMsg && !gpsCoords && (
-                        <div style={{ marginTop: '7px', fontSize: '12px', fontWeight: 700, color: '#f59e0b' }}>
-                          {gpsErrorMsg}
+                      {addons.curbsidePickupCar?.enabled && (
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--pm-line)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: accentText, marginBottom: '4px' }}>
+                            <Car size={15} />
+                            <span>الاستلام السريع من السيارة</span>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: 'var(--pm-muted)', marginBottom: '6px' }}>
+                            {addons.curbsidePickupCar.instructions || 'اكتب لون وموديل سيارتك أو رقم اللوحة وسنوصلها لباب السيارة'}
+                          </div>
+                          <input
+                            type="text"
+                            value={curbsideCarInfo}
+                            onChange={(e) => setCurbsideCarInfo(e.target.value)}
+                            placeholder="مثال: تويوتا كامري بيضاء — رقم 12345"
+                            className="pm-checkout-input"
+                            style={{ background: 'var(--pm-card)', height: '42px' }}
+                          />
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Detailed Address Single Bar (No label or description — single placeholder inside bar only) */}
-                    <input
-                      id="pm-checkout-address"
-                      type="text"
-                      className="pm-checkout-input pm-address-bar-input"
-                      value={customerAddress}
-                      onChange={(e) => setCustomerAddress(e.target.value)}
-                      placeholder="اكتب عنوانك التفصيلي"
-                      aria-label="اكتب عنوانك التفصيلي"
-                      style={{
-                        background: 'var(--pm-card)',
-                      }}
-                    />
-
-                    {checkoutTriedSubmit && !gpsCoords && !gpsAttempted && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                        يرجى الضغط على زر "تحديد موقعي الحالي" أعلاه أولاً.
-                      </div>
-                    )}
-
-                    {checkoutTriedSubmit && !gpsCoords && gpsAttempted && customerAddress.trim().length < 5 && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                        تعذر التحديد التلقائي للموقع، يرجى كتابة عنوانك التفصيلي أعلاه.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {orderType === 'pickup' && (
-                  <div
+                {/* Pinned Symmetrical Submit Footer */}
+                <div className="pm-cart-footer">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingOrder}
+                    className="pm-cart-complete-btn pm-co-submit-btn"
                     style={{
-                      background: 'var(--pm-soft)',
-                      border: '1px solid var(--pm-line)',
-                      borderRadius: '12px',
-                      padding: '10px 12px',
-                      marginBottom: '14px',
-                      fontSize: '12.5px',
-                      color: 'var(--pm-ink)',
+                      background: orderChannel === 'telegram' && !unlistedAreaSelected ? '#0088cc' : brandColor,
+                      color: orderChannel === 'telegram' && !unlistedAreaSelected ? '#ffffff' : brandInk,
+                      cursor: isSubmittingOrder ? 'wait' : 'pointer',
+                      opacity: isSubmittingOrder ? 0.78 : 1,
                     }}
                   >
-                    <b>معلومات فرع الاستلام: {rest.n}</b>
-                    {(rest.mapUrl || addons.locationLinks?.googleMapsUrl || rest.wazeUrl || addons.locationLinks?.wazeUrl) && (
-                      <div style={{ marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                        {(rest.mapUrl || addons.locationLinks?.googleMapsUrl) && (
-                          <a
-                            href={rest.mapUrl || addons.locationLinks?.googleMapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: accentText, fontWeight: 700, textDecoration: 'underline' }}
-                          >
-                            خرائط كوكل ←
-                          </a>
-                        )}
-                        {(rest.wazeUrl || addons.locationLinks?.wazeUrl) && (
-                          <a
-                            href={rest.wazeUrl || addons.locationLinks?.wazeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: accentText, fontWeight: 700, textDecoration: 'underline' }}
-                          >
-                            موقع ويز (Waze) ←
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-                    {addons.curbsidePickupCar?.enabled && (
-                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--pm-line)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: accentText, marginBottom: '4px' }}>
-                          <Car size={15} />
-                          <span>الاستلام السريع من السيارة</span>
-                        </div>
-                        <div style={{ fontSize: '11.5px', color: 'var(--pm-muted)', marginBottom: '6px' }}>
-                          {addons.curbsidePickupCar.instructions || 'اكتب لون وموديل سيارتك أو رقم اللوحة وسنوصلها لباب السيارة'}
-                        </div>
-                        <input
-                          type="text"
-                          value={curbsideCarInfo}
-                          onChange={(e) => setCurbsideCarInfo(e.target.value)}
-                          placeholder="مثال: تويوتا كامري بيضاء — رقم 12345"
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            borderRadius: '9px',
-                            border: '1px solid var(--pm-line)',
-                            background: 'var(--pm-card)',
-                            color: 'var(--pm-ink)',
-                            fontSize: '12.5px',
-                            fontWeight: 700,
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isSubmittingOrder}
-                  className="pm-cart-complete-btn"
-                  style={{
-                    justifyContent: 'center',
-                    background: orderChannel === 'telegram' && !unlistedAreaSelected ? '#0088cc' : brandColor,
-                    color: orderChannel === 'telegram' && !unlistedAreaSelected ? '#ffffff' : brandInk,
-                    cursor: isSubmittingOrder ? 'wait' : 'pointer',
-                    opacity: isSubmittingOrder ? 0.75 : 1,
-                  }}
-                >
-                  <span>
-                    {isSubmittingOrder
-                      ? 'جاري إرسال الطلب...'
-                      : unlistedAreaSelected
-                      ? `إكمال الطلب والتواصل مع الكاشير (${fmtMoney(finalTotal)})`
-                      : `تأكيد وإرسال الطلب (${fmtMoney(finalTotal)})`}
-                  </span>
-                </button>
+                    <span className="pm-cta-label">
+                      <Send size={16} style={{ flexShrink: 0 }} />
+                      <span>{isSubmittingOrder ? 'جاري إرسال الطلب...' : 'إرسال الطلب'}</span>
+                    </span>
+                    <span className="pm-cta-price tabular-nums">{fmtMoney(finalTotal)}</span>
+                  </button>
+                </div>
               </form>
             )}
           </motion.div>

@@ -11,7 +11,6 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  Coins,
   Copy,
   ExternalLink,
   Eye,
@@ -95,7 +94,6 @@ export const SettingsPage: React.FC = () => {
     setShowLogoUrlField,
     showBannerUrlField,
     setShowBannerUrlField,
-    handleCurrencyChange,
     flushAllPendingSaves,
     mediaLibraryItems,
     uploadImagesToLibrary,
@@ -383,10 +381,10 @@ export const SettingsPage: React.FC = () => {
               {...dashSubTabMotion(prefersReducedMotion)}
               style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
             >
-              {/* Currency & Order Types Panel */}
+              {/* Order Types & Notification Channels Panel */}
               <div className="mp-set2-panel">
                 <div className="mp-set2-panel-head">
-                  <h2 className="mp-set2-panel-title">العملة وطرق استلام الطلبات</h2>
+                  <h2 className="mp-set2-panel-title">طرق استلام الطلبات</h2>
                 </div>
 
                 <div className="mp-set2-list">
@@ -558,141 +556,85 @@ export const SettingsPage: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* Currency */}
-                  <div className="mp-set2-row">
-                    <div className="mp-set2-row-meta">
-                      <div className="mp-set2-mini-ico">
-                        <Coins size={19} />
-                      </div>
-                      <div className="mp-set2-row-label">العملة</div>
-                    </div>
-
-                    <div className="mp-set2-currency-select" style={{ minWidth: '190px' }}>
-                      <AppSelect
-                        aria-label="اختيار العملة"
-                        title="اختر العملة"
-                        value={restCurrency}
-                        onChange={(val) => handleCurrencyChange(val)}
-                        variant="compact"
-                        options={[
-                          { value: 'د.ع', label: 'د.ع — دينار عراقي' },
-                          { value: '$', label: '$ — دولار أمريكي' },
-                          { value: 'ر.س', label: 'ر.س — ريال سعودي' },
-                          { value: 'د.إ', label: 'د.إ — درهم إماراتي' },
-                          { value: 'د.ك', label: 'د.ك — دينار كويتي' },
-                          { value: 'د.أ', label: 'د.أ — دينار أردني' },
-                          { value: 'ر.ق', label: 'ر.ق — ريال قطري' },
-                          { value: 'د.ب', label: 'د.ب — دينار بحريني' },
-                          { value: 'ر.ع', label: 'ر.ع — ريال عماني' },
-                          { value: 'ج.م', label: 'ج.م — جنيه مصري' },
-                          { value: 'ل.ل', label: 'ل.ل — ليرة لبنانية' },
-                          { value: '€', label: '€ — يورو' },
-                        ]}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Receiving Channels (Moved inside panel; at least 1 active required) */}
-                <div className="mp-set2-channels-block">
-                  <div className="mp-set2-channels-title">قناة وصول الطلبات</div>
-
-                  <div className="mp-set2-channels-grid">
-                    {[
-                      {
-                        id: 'whatsapp' as const,
-                        title: 'استلام رسائل وتساب',
-                        active: whatsappEnabled,
-                        accent: '#16a34a',
-                        Icon: MessageCircle,
-                      },
-                      {
-                        id: 'telegram' as const,
-                        title: 'استلام رسائل تليجرام',
-                        active: telegramEnabled,
-                        accent: '#0088cc',
-                        Icon: Send,
-                      },
-                      {
-                        id: 'app' as const,
-                        title: 'استلام اشعارات التطبيق',
-                        active: appNotificationsEnabled,
-                        accent: '#10b981',
-                        Icon: Bell,
-                      },
-                    ].map((opt) => {
-                      const OptIcon = opt.Icon;
-                      return (
+                  {/* Order Receiving Channels as Unified Toggle Switch Rows (at least 1 active required) */}
+                  {[
+                    {
+                      id: 'whatsapp' as const,
+                      title: 'استلام رسائل وتساب',
+                      active: whatsappEnabled,
+                      Icon: MessageCircle,
+                    },
+                    {
+                      id: 'telegram' as const,
+                      title: 'استلام رسائل تليجرام',
+                      active: telegramEnabled,
+                      Icon: Send,
+                    },
+                    {
+                      id: 'app' as const,
+                      title: 'استلام اشعارات التطبيق',
+                      active: appNotificationsEnabled,
+                      Icon: Bell,
+                    },
+                  ].map((opt) => {
+                    const OptIcon = opt.Icon;
+                    return (
+                      <div key={opt.id} className="mp-set2-row">
+                        <div className="mp-set2-row-meta">
+                          <div className="mp-set2-mini-ico">
+                            <OptIcon size={19} />
+                          </div>
+                          <div className="mp-set2-row-label">{opt.title}</div>
+                        </div>
                         <button
-                          key={opt.id}
                           type="button"
-                          aria-pressed={opt.active}
+                          role="switch"
+                          aria-checked={opt.active}
+                          aria-label={opt.title}
                           onClick={() => toggleOrderDeliveryChannel(opt.id)}
-                          className={`mp-set2-channel-card ${opt.active ? 'is-selected' : ''}`}
-                          style={
-                            opt.active
-                              ? {
-                                  borderColor: opt.accent,
-                                  background: `color-mix(in srgb, ${opt.accent} 14%, transparent)`,
-                                }
-                              : undefined
-                          }
+                          className={`ios-switch sm ${opt.active ? 'on' : 'off'}`}
                         >
-                          <OptIcon
-                            size={19}
-                            style={{
-                              color: opt.active ? opt.accent : 'var(--muted)',
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span className="mp-set2-channel-label">{opt.title}</span>
-                          <span
-                            className={`mp-set2-channel-check ${opt.active ? 'is-on' : ''}`}
-                            style={opt.active ? { color: opt.accent } : undefined}
-                            aria-hidden="true"
-                          >
-                            {opt.active ? <CheckCircle2 size={17} /> : null}
-                          </span>
+                          <span className="ios-switch-thumb" />
                         </button>
-                      );
-                    })}
-                  </div>
-
-                  {missingTelegram && (
-                    <div className="mp-set2-alert warn">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
-                        <AlertCircle size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
-                        <span>لم يتم ربط التليجرام بعد — شارك رقمك مع البوت لاستقبال الطلبات.</span>
                       </div>
-                      <button
-                        type="button"
-                        className="btn s"
-                        onClick={() => setSectionTab('telegram')}
-                        style={{ fontWeight: 800, fontSize: '12px' }}
-                      >
-                        <Send size={13} />
-                        <span>إعداد التليجرام</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {missingWhatsapp && (
-                    <div className="mp-set2-alert danger">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
-                        <AlertCircle size={16} style={{ flexShrink: 0 }} />
-                        <span>يرجى إدخال رقم الواتساب في تبويب «الروابط» لاستقبال الطلبات.</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn s"
-                        onClick={goToWhatsAppInput}
-                        style={{ fontSize: '12px', fontWeight: 800 }}
-                      >
-                        إدخال الرقم الآن
-                      </button>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
+
+                {missingTelegram && (
+                  <div className="mp-set2-alert warn" style={{ marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                      <AlertCircle size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                      <span>لم يتم ربط التليجرام بعد — شارك رقمك مع البوت لاستقبال الطلبات.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn s"
+                      onClick={() => setSectionTab('telegram')}
+                      style={{ fontWeight: 800, fontSize: '12px' }}
+                    >
+                      <Send size={13} />
+                      <span>إعداد التليجرام</span>
+                    </button>
+                  </div>
+                )}
+
+                {missingWhatsapp && (
+                  <div className="mp-set2-alert danger" style={{ marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px' }}>
+                      <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                      <span>يرجى إدخال رقم الواتساب في تبويب «الروابط» لاستقبال الطلبات.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn s"
+                      onClick={goToWhatsAppInput}
+                      style={{ fontSize: '12px', fontWeight: 800 }}
+                    >
+                      إدخال الرقم الآن
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Working Hours Panel */}
