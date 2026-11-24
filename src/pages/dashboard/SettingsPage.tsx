@@ -38,6 +38,7 @@ import {
   X,
 } from 'lucide-react';
 import { MediaLibraryModal } from '../../components/MediaLibraryModal';
+import { TimePickerField } from '../../components/TimePickerField';
 import { AppSelect } from '../../components/AppSelect';
 import { fetchDashboardTelegramStatusApi } from '../../utils/adminApi';
 import { isReservedSlug } from '../../utils/businessDefaults';
@@ -734,26 +735,24 @@ export const SettingsPage: React.FC = () => {
                         <div className="mp-set2-hours-quick-label">توقيت موحد للأيام المفتوحة:</div>
                         <div className="mp-set2-hours-quick-controls">
                           <div className="mp-set2-time-pair">
-                            <label className="mp-set2-time-box">
+                            <div className="mp-set2-time-box">
                               <span>من</span>
-                              <input
-                                type="time"
-                                dir="ltr"
+                              <TimePickerField
                                 value={workFrom}
-                                onChange={(e) => setWorkFrom(e.target.value)}
+                                title="وقت الفتح الموحد"
+                                onChange={(val) => setWorkFrom(val)}
                                 className="mp-themed-input"
                               />
-                            </label>
-                            <label className="mp-set2-time-box">
+                            </div>
+                            <div className="mp-set2-time-box">
                               <span>إلى</span>
-                              <input
-                                type="time"
-                                dir="ltr"
+                              <TimePickerField
                                 value={workTo}
-                                onChange={(e) => setWorkTo(e.target.value)}
+                                title="وقت الإغلاق الموحد"
+                                onChange={(val) => setWorkTo(val)}
                                 className="mp-themed-input"
                               />
-                            </label>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -800,36 +799,34 @@ export const SettingsPage: React.FC = () => {
 
                               {dayCfg.open && (
                                 <div className="mp-set2-time-pair">
-                                  <label className="mp-set2-time-box">
+                                  <div className="mp-set2-time-box">
                                     <span>من</span>
-                                    <input
-                                      type="time"
-                                      dir="ltr"
+                                    <TimePickerField
                                       value={dayCfg.from || workFrom}
-                                      onChange={(e) =>
+                                      title={`وقت فتح ${label}`}
+                                      onChange={(val) =>
                                         setWeeklyHours((prev) => ({
                                           ...prev,
-                                          [key]: { ...dayCfg, from: e.target.value },
+                                          [key]: { ...dayCfg, from: val },
                                         }))
                                       }
                                       className="mp-themed-input"
                                     />
-                                  </label>
-                                  <label className="mp-set2-time-box">
+                                  </div>
+                                  <div className="mp-set2-time-box">
                                     <span>إلى</span>
-                                    <input
-                                      type="time"
-                                      dir="ltr"
+                                    <TimePickerField
                                       value={dayCfg.to || workTo}
-                                      onChange={(e) =>
+                                      title={`وقت إغلاق ${label}`}
+                                      onChange={(val) =>
                                         setWeeklyHours((prev) => ({
                                           ...prev,
-                                          [key]: { ...dayCfg, to: e.target.value },
+                                          [key]: { ...dayCfg, to: val },
                                         }))
                                       }
                                       className="mp-themed-input"
                                     />
-                                  </label>
+                                  </div>
                                 </div>
                               )}
                             </div>

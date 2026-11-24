@@ -6,6 +6,7 @@
 import React from 'react';
 import { Clock, Plus, Trash2 } from 'lucide-react';
 import type { AvailabilitySchedule } from '../types';
+import { TimePickerField } from './TimePickerField';
 import {
   formatScheduleLabel,
   getAvailabilityDays,
@@ -226,39 +227,35 @@ export const AvailabilityScheduleEditor: React.FC<AvailabilityScheduleEditorProp
                   borderTop: idx > 0 ? '1px solid var(--mp-glass-divider, var(--line))' : 'none',
                 }}
               >
-                <label className="f" style={{ marginBottom: 0, gap: '5px', minWidth: 0 }}>
+                <div className="f" style={{ marginBottom: 0, gap: '5px', minWidth: 0 }}>
                   <span style={{ fontSize: '12.5px', color: 'var(--muted)', fontWeight: 700 }}>
                     {windows.length > 1 ? `من (#${idx + 1})` : 'من'}
                   </span>
-                  <input
-                    type="time"
-                    dir="ltr"
+                  <TimePickerField
                     value={win.from}
-                    onChange={(e) => {
-                      const val = e.target.value || '08:00';
+                    title={windows.length > 1 ? `وقت البدء (#${idx + 1})` : 'وقت البدء'}
+                    onChange={(val) => {
                       updateWindows(windows.map((row, i) => (i === idx ? { ...row, from: val } : row)));
                     }}
                     className="mp-avail-time-input"
                     style={inputStyle}
                   />
-                </label>
+                </div>
 
-                <label className="f" style={{ marginBottom: 0, gap: '5px', minWidth: 0 }}>
+                <div className="f" style={{ marginBottom: 0, gap: '5px', minWidth: 0 }}>
                   <span style={{ fontSize: '12.5px', color: 'var(--muted)', fontWeight: 700 }}>
                     إلى
                   </span>
-                  <input
-                    type="time"
-                    dir="ltr"
+                  <TimePickerField
                     value={win.to}
-                    onChange={(e) => {
-                      const val = e.target.value || '12:00';
+                    title={windows.length > 1 ? `وقت الانتهاء (#${idx + 1})` : 'وقت الانتهاء'}
+                    onChange={(val) => {
                       updateWindows(windows.map((row, i) => (i === idx ? { ...row, to: val } : row)));
                     }}
                     className="mp-avail-time-input"
                     style={inputStyle}
                   />
-                </label>
+                </div>
 
                 {windows.length > 1 && (
                   <button

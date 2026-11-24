@@ -24,6 +24,7 @@ import {
 import { getDashboardTabPath } from '../utils/router';
 import { getLocalizedPlanName, resolveRestaurantPlan } from '../utils/plans';
 import { AppSelect } from '../components/AppSelect';
+import { TimePickerField } from '../components/TimePickerField';
 import {
   UtensilsCrossed,
   ShoppingBag,
@@ -1168,17 +1169,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
                 <label style={{ fontSize: '13px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
                   يفتح من الساعة:
                 </label>
-                <input
-                  type="time"
+                <TimePickerField
                   value={hoursFrom}
-                  onChange={(e) => setHoursFrom(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '14px',
-                    border: '1px solid var(--mp-glass-border)',
-                    background: 'var(--mp-glass-control)',
-                  }}
+                  title="يفتح من الساعة"
+                  onChange={(val) => setHoursFrom(val)}
                 />
               </div>
 
@@ -1186,17 +1180,10 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({
                 <label style={{ fontSize: '13px', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
                   يغلق في الساعة:
                 </label>
-                <input
-                  type="time"
+                <TimePickerField
                   value={hoursTo}
-                  onChange={(e) => setHoursTo(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '14px',
-                    border: '1px solid var(--mp-glass-border)',
-                    background: 'var(--mp-glass-control)',
-                  }}
+                  title="يغلق في الساعة"
+                  onChange={(val) => setHoursTo(val)}
                 />
               </div>
             </div>

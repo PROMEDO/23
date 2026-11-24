@@ -1287,6 +1287,7 @@ const PublicMenuContent: React.FC<PublicMenuContentProps> = ({
   const [selectedCityIdx, setSelectedCityIdx] = useState<number>(0);
   const [unlistedAreaSelected, setUnlistedAreaSelected] = useState<boolean>(false);
   const [zoneDropdownOpen, setZoneDropdownOpen] = useState<boolean>(false);
+  const [zoneSearch, setZoneSearch] = useState<string>('');
   const [checkoutTriedSubmit, setCheckoutTriedSubmit] = useState<boolean>(false);
 
   // Cross-menu saved customer details (auto-filled across all restaurant menus; GPS stays live per visit)
@@ -5500,159 +5501,266 @@ const PublicMenuContent: React.FC<PublicMenuContentProps> = ({
                   )}
                 </div>
 
-                {/* 3. Collapsible Delivery Zone Button + Options (Last option: منطقتي غير موجودة) */}
-                {orderType === 'delivery' && deliveryZones.length > 0 && (
-                  <div
-                    className={`pm-checkout-section ${
-                      checkoutTriedSubmit && !activeZone && !unlistedAreaSelected ? 'has-error' : ''
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className={`pm-zone-trigger-btn ${
-                        activeZone || unlistedAreaSelected ? 'has-selection' : ''
+                {/* 3. Polished Delivery Zone Selector (Structured Cards + Search + Sub-Cities) */}
+                {orderType === 'delivery' && deliveryZones.length > 0 && (() => {
+                  const activeZoneName = activeZone ? String(activeZone.area || activeZone.name || '').trim() : '';
+                  const normalizedZoneQuery = zoneSearch.trim().toLowerCase();
+                  const filteredZones = deliveryZones
+                    .map((z, idx) => ({ z, idx, label: String(z.area || z.name || '').trim() }))
+                    .filter(({ label }) => !normalizedZoneQuery || label.toLowerCase().includes(normalizedZoneQuery));
+
+                  return (
+                    <div
+                      className={`pm-checkout-section pm-zone-section ${
+                        checkoutTriedSubmit && !activeZone && !unlistedAreaSelected ? 'has-error' : ''
                       }`}
-                      onClick={() => setZoneDropdownOpen((prev) => !prev)}
-                      aria-expanded={zoneDropdownOpen}
                     >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {unlistedAreaSelected
-                          ? 'منطقتي غير موجودة'
-                          : activeZone
-                          ? `${activeZone.area}${
-                              hasMultipleSubCities && activeCity?.name ? ` - ${activeCity.name}` : ''
-                            } · ${effectiveDeliveryFee > 0 ? fmtMoney(effectiveDeliveryFee) : 'مجاني'}`
-                          : 'اختر منطقة التوصيل'}
-                      </span>
-                      <ChevronDown
-                        size={18}
-                        style={{
-                          flexShrink: 0,
-                          color: 'var(--pm-muted)',
-                          transform: zoneDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.18s ease',
-                        }}
-                      />
-                    </button>
-
-                    {zoneDropdownOpen && (
-                      <div className="pm-zone-dropdown">
-                        <div className={`pm-zone-list ${deliveryZones.length > 3 ? 'two-col' : ''}`}>
-                          {deliveryZones.map((z, idx) => {
-                            const selected = !unlistedAreaSelected && selectedAreaIdx === idx;
-                            const flatFee = z.fee ?? z.cities?.[0]?.fee ?? 0;
-                            const hasSub = Boolean(z.cities && z.cities.length > 1);
-                            return (
-                              <button
-                                key={`${z.area}-${idx}`}
-                                type="button"
-                                className={`pm-zone-btn ${selected ? 'selected' : ''}`}
-                                onClick={() => {
-                                  setSelectedAreaIdx(idx);
-                                  setSelectedCityIdx(0);
-                                  setUnlistedAreaSelected(false);
-                                  if (!hasSub) {
-                                    setZoneDropdownOpen(false);
-                                  }
-                                }}
-                              >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
-                                  <span
-                                    style={{
-                                      width: '18px',
-                                      height: '18px',
-                                      borderRadius: '50%',
-                                      border: selected ? '5px solid var(--pm-brand)' : '1.5px solid var(--pm-muted)',
-                                      background: 'var(--pm-card)',
-                                      flexShrink: 0,
-                                    }}
-                                  />
-                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {z.area}
-                                  </span>
-                                </span>
-                                <span className="tabular-nums" style={{ fontSize: '12px', fontWeight: 800, color: accentText, flexShrink: 0 }}>
-                                  {hasSub ? 'أحياء متعددة' : flatFee > 0 ? fmtMoney(flatFee) : 'مجاني'}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        <button
-                          type="button"
-                          className={`pm-zone-unlisted-btn ${unlistedAreaSelected ? 'selected' : ''}`}
-                          onClick={() => {
-                            setUnlistedAreaSelected(true);
-                            setSelectedAreaIdx(-1);
-                            setSelectedCityIdx(0);
-                            setZoneDropdownOpen(false);
-                          }}
-                        >
-                          <span>منطقتي غير موجودة</span>
-                          <MessageCircle size={17} style={{ color: accentText, flexShrink: 0 }} />
-                        </button>
+                      <div className="pm-zone-sec-header">
+                        <span className="pm-zone-sec-title">
+                          <MapPin size={15} style={{ color: accentText, flexShrink: 0 }} />
+                          <span>منطقة التوصيل</span>
+                        </span>
+                        {unlistedAreaSelected ? (
+                          <span className="pm-zone-header-pill is-warn">تُحدد عبر واتساب</span>
+                        ) : activeZone ? (
+                          <span className="pm-zone-header-pill is-ok tabular-nums">
+                            {effectiveDeliveryFee > 0 ? fmtMoney(effectiveDeliveryFee) : 'توصيل مجاني'}
+                          </span>
+                        ) : (
+                          <span className="pm-zone-header-count">
+                            {deliveryZones.length} {deliveryZones.length <= 10 ? 'مناطق' : 'منطقة'}
+                          </span>
+                        )}
                       </div>
-                    )}
 
-                    {activeZone && !unlistedAreaSelected && hasMultipleSubCities && (
-                      <div style={{ marginTop: '10px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--pm-muted)', marginBottom: '5px' }}>
-                          اختر الحي / المدينة ضمن {activeZone.area}
-                        </label>
-                        <AppSelect
-                          title="اختر الحي / المدينة"
-                          variant="compact"
-                          value={String(safeCityIdx)}
-                          onChange={(val) => {
-                            setSelectedCityIdx(Number(val));
-                            setZoneDropdownOpen(false);
-                          }}
-                          options={zoneCities.map((ct, idx) => ({
-                            value: String(idx),
-                            label: ct.name,
-                            hint: ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني',
-                          }))}
+                      <button
+                        type="button"
+                        className={`pm-zone-trigger-btn ${
+                          activeZone || unlistedAreaSelected ? 'has-selection' : ''
+                        }`}
+                        onClick={() => setZoneDropdownOpen((prev) => !prev)}
+                        aria-expanded={zoneDropdownOpen}
+                      >
+                        <span className="pm-zone-trigger-icon">
+                          {activeZone || unlistedAreaSelected ? (
+                            <Check size={16} strokeWidth={2.8} />
+                          ) : (
+                            <Truck size={16} />
+                          )}
+                        </span>
+
+                        <span className="pm-zone-trigger-copy">
+                          <span className="pm-zone-trigger-main">
+                            {unlistedAreaSelected
+                              ? 'منطقتي غير موجودة بالقائمة'
+                              : activeZone
+                              ? `${activeZoneName}${
+                                  hasMultipleSubCities && activeCity?.name ? ` — ${activeCity.name}` : ''
+                                }`
+                              : 'اختر منطقة التوصيل'}
+                          </span>
+                          <span className="pm-zone-trigger-sub">
+                            {unlistedAreaSelected
+                              ? 'سيتم تحديد أجور التوصيل مباشرة مع الكاشير'
+                              : activeZone
+                              ? qualifiesFreeDelivery && rawDeliveryFee > 0
+                                ? `توصيل مجاني بدلاً من ${fmtMoney(rawDeliveryFee)}`
+                                : effectiveDeliveryFee > 0
+                                ? `أجور التوصيل: ${fmtMoney(effectiveDeliveryFee)} · اضغط للتغيير`
+                                : 'توصيل مجاني لهذه المنطقة · اضغط للتغيير'
+                              : 'اضغط لعرض المناطق المتاحة وأجور التوصيل'}
+                          </span>
+                        </span>
+
+                        <ChevronDown
+                          size={18}
                           style={{
-                            background: 'var(--pm-card)',
-                            color: 'var(--pm-ink)',
-                            border: '1px solid var(--pm-line)',
-                            borderRadius: '11px',
+                            flexShrink: 0,
+                            color: 'var(--pm-muted)',
+                            transform: zoneDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease',
                           }}
                         />
-                      </div>
-                    )}
+                      </button>
 
-                    {activeZone && !unlistedAreaSelected && activeCity?.eta && (
-                      <div style={{ fontSize: '11.5px', color: 'var(--pm-muted)', marginTop: '8px', fontWeight: 600 }}>
-                        مدة التوصيل المتوقعة: {activeCity.eta}
-                      </div>
-                    )}
+                      {zoneDropdownOpen && (
+                        <div className="pm-zone-dropdown">
+                          {deliveryZones.length >= 5 && (
+                            <div className="pm-zone-search-box">
+                              <Search size={15} style={{ color: 'var(--pm-muted)', flexShrink: 0 }} />
+                              <input
+                                type="text"
+                                dir="auto"
+                                value={zoneSearch}
+                                onChange={(e) => setZoneSearch(e.target.value)}
+                                placeholder="ابحث عن اسم منطقتك..."
+                                className="pm-zone-search-input"
+                              />
+                              {zoneSearch && (
+                                <button
+                                  type="button"
+                                  aria-label="مسح البحث"
+                                  onClick={() => setZoneSearch('')}
+                                  className="pm-zone-search-clear"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
 
-                    {unlistedAreaSelected && (
-                      <div
-                        style={{
-                          marginTop: '8px',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          background: 'color-mix(in srgb, var(--pm-brand) 10%, transparent)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          color: 'var(--pm-ink)',
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        سيتم فتح محادثة الواتساب مع الكاشير لتأكيد التوصيل وتحديد السعر لمنطقتك.
-                      </div>
-                    )}
+                          {filteredZones.length === 0 ? (
+                            <div className="pm-zone-empty-search">
+                              لا توجد منطقة مطابقة لـ «{zoneSearch}»
+                            </div>
+                          ) : (
+                            <div className={`pm-zone-list ${filteredZones.length > 1 ? 'two-col' : ''}`}>
+                              {filteredZones.map(({ z, idx, label }) => {
+                                const selected = !unlistedAreaSelected && selectedAreaIdx === idx;
+                                const flatFee = Number(z.fee ?? z.cities?.[0]?.fee ?? 0) || 0;
+                                const hasSub = Boolean(z.cities && z.cities.length > 1);
+                                const zoneDisplayLabel = label || `منطقة #${idx + 1}`;
+                                return (
+                                  <button
+                                    key={`${zoneDisplayLabel}-${idx}`}
+                                    type="button"
+                                    className={`pm-zone-btn ${selected ? 'selected' : ''}`}
+                                    onClick={() => {
+                                      setSelectedAreaIdx(idx);
+                                      setSelectedCityIdx(0);
+                                      setUnlistedAreaSelected(false);
+                                      if (!hasSub) {
+                                        setZoneDropdownOpen(false);
+                                        setZoneSearch('');
+                                      }
+                                    }}
+                                  >
+                                    <div className="pm-zone-card-top">
+                                      <span className="pm-zone-card-name">{zoneDisplayLabel}</span>
+                                      <span className={`pm-zone-card-radio ${selected ? 'is-checked' : ''}`}>
+                                        {selected && <Check size={11} strokeWidth={3.2} />}
+                                      </span>
+                                    </div>
+                                    <div className="pm-zone-card-fee tabular-nums">
+                                      {hasSub ? (
+                                        <span className="pm-zone-fee-multi">أحياء متعددة</span>
+                                      ) : flatFee > 0 ? (
+                                        <span className="pm-zone-fee-paid">{fmtMoney(flatFee)}</span>
+                                      ) : (
+                                        <span className="pm-zone-fee-free">توصيل مجاني</span>
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
 
-                    {checkoutTriedSubmit && !activeZone && !unlistedAreaSelected && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-                        يرجى اختيار منطقة التوصيل من القائمة.
-                      </div>
-                    )}
-                  </div>
-                )}
+                          <button
+                            type="button"
+                            className={`pm-zone-unlisted-btn ${unlistedAreaSelected ? 'selected' : ''}`}
+                            onClick={() => {
+                              setUnlistedAreaSelected(true);
+                              setSelectedAreaIdx(-1);
+                              setSelectedCityIdx(0);
+                              setZoneDropdownOpen(false);
+                              setZoneSearch('');
+                            }}
+                          >
+                            <span className="pm-zone-unlisted-copy">
+                              <b>منطقتي غير موجودة بالقائمة</b>
+                              <span>تواصل سريع لتحديد التوصيل</span>
+                            </span>
+                            <span className="pm-zone-unlisted-ico">
+                              <MessageCircle size={16} />
+                            </span>
+                          </button>
+                        </div>
+                      )}
+
+                      {activeZone && !unlistedAreaSelected && hasMultipleSubCities && (
+                        <div className="pm-zone-subcities-wrap">
+                          <label className="pm-zone-subcities-lbl">
+                            اختر الحي ضمن {activeZoneName}
+                          </label>
+                          {zoneCities.length <= 6 ? (
+                            <div className="pm-zone-subcities-grid">
+                              {zoneCities.map((ct, idx) => {
+                                const isCitySelected = safeCityIdx === idx;
+                                return (
+                                  <button
+                                    key={`${ct.name}-${idx}`}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCityIdx(idx);
+                                      setZoneDropdownOpen(false);
+                                    }}
+                                    className={`pm-zone-subcity-chip${isCitySelected ? ' selected' : ''}`}
+                                  >
+                                    <span>{ct.name}</span>
+                                    <span className="tabular-nums pm-zone-subcity-fee">
+                                      {ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني'}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <AppSelect
+                              title="اختر الحي / المدينة"
+                              variant="compact"
+                              value={String(safeCityIdx)}
+                              onChange={(val) => {
+                                setSelectedCityIdx(Number(val));
+                                setZoneDropdownOpen(false);
+                              }}
+                              options={zoneCities.map((ct, idx) => ({
+                                value: String(idx),
+                                label: ct.name,
+                                hint: ct.fee > 0 ? fmtMoney(ct.fee) : 'مجاني',
+                              }))}
+                              style={{
+                                background: 'var(--pm-card)',
+                                color: 'var(--pm-ink)',
+                                border: '1px solid var(--pm-line)',
+                                borderRadius: '11px',
+                              }}
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {activeZone && !unlistedAreaSelected && activeCity?.eta && (
+                        <div style={{ fontSize: '11.5px', color: 'var(--pm-muted)', marginTop: '8px', fontWeight: 600 }}>
+                          مدة التوصيل المتوقعة: {activeCity.eta}
+                        </div>
+                      )}
+
+                      {unlistedAreaSelected && (
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            padding: '9px 11px',
+                            borderRadius: '12px',
+                            background: 'color-mix(in srgb, var(--pm-brand) 10%, transparent)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            color: 'var(--pm-ink)',
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          سيتم فتح محادثة الواتساب مع الكاشير لتأكيد التوصيل وتحديد السعر لمنطقتك.
+                        </div>
+                      )}
+
+                      {checkoutTriedSubmit && !activeZone && !unlistedAreaSelected && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
+                          يرجى اختيار منطقة التوصيل من القائمة.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {orderType === 'table' && (
                   <div style={{ marginBottom: '14px' }}>
